@@ -1,17 +1,32 @@
 import { Box, Text, TextField, Image, Button } from '@skynexui/components';
 import React from 'react';
 import appConfig from '../config.json';
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
+import {useRouter} from 'next/router';
+import {ButtonSendSticker} from './../src/components/ButtonSendSticker';
 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTY0MzMyNzY2NSwiZXhwIjoxOTU4OTAzNjY1fQ.jnBEleYf_ZdGirkn8BjckvcoRoOXEMh7-pa85y0lC0o'
 
-const SUPABASE_URL = 'https://teydpkpqjxtlflhcmiuc.supabase.co'
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTY0MzMyNzY2NSwiZXhwIjoxOTU4OTAzNjY1fQ.jnBEleYf_ZdGirkn8BjckvcoRoOXEMh7-pa85y0lC0o';
+
+const SUPABASE_URL = 'https://teydpkpqjxtlflhcmiuc.supabase.co';
 
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+function pegaMensagensEmTempoReal(adicionaMensagem) {
+    return supabaseClient
+    .from('mensagens')
+    .on('INSERT', (respostaLive) => {
+        adicionaMensagem(respostaLive.new)
+    })
+    .subscribe();
+}
+
 export default function ChatPage() {
+    const roteamento = useRouter();
+    const usuarioLogado = roteamento.query.username;
     const [mensagem, setMensagem] = React.useState('');
     const [listaDeMensagens, setListaDeMensagens] = React.useState([]);
+
 
     React.useEffect(() => {
          supabaseClient
@@ -21,13 +36,23 @@ export default function ChatPage() {
         .then(({ data }) => { console.log('dados da       consulta', data)
         setListaDeMensagens(data)
         })
+
+    pegaMensagensEmTempoReal((novaMensagem) => {
+        console.log('nova mensage:', novaMensagem)
+               setListaDeMensagens((valorAtualDaLista)=> {
+                   return [
+                       novaMensagem,
+                       ...valorAtualDaLista,
+                   ]
+               });
+        }) 
     }, []);
 
 
     function handleNovaMensagem(novaMensagem) {
         const mensagem = {
             //id: listaDeMensagens.length + 1,
-            de: 'vanessametonini',
+            de: usuarioLogado,
             texto: novaMensagem,
         };
 
@@ -36,13 +61,9 @@ export default function ChatPage() {
             .insert([
                 mensagem
             ])
-            .then(({data}) =>{
-                console.log('Criando mensagem', data)
-                setListaDeMensagens([
-                    data[0],
-                    ...listaDeMensagens,
-                ]);
-            })
+           .then(({data}) =>{
+              console.log('Criando mensagem', data)
+           })
 
         setMensagem('');
     }
@@ -124,6 +145,13 @@ export default function ChatPage() {
                                 color: appConfig.theme.colors.neutrals[200],
                             }}
                         />
+                        {/*Callback*/}
+                        <ButtonSendSticker
+                            onStickerClick={(sticker)=> {
+                                console.log('Salva esse sticker', sticker);
+                                handleNovaMensagem(`:sticker: ${sticker}`);
+                            }}
+                        /> 
                     </Box>
                 </Box>
             </Box>
@@ -206,7 +234,13 @@ function MessageList(props) {
                                 {(new Date().toLocaleDateString())}
                             </Text>
                         </Box>
-                        {mensagem.texto}
+                        {mensagem.texto.startsWith(':sticker:')
+                        ?  ( 
+                             <Image src={mensagem.texto.replace(':sticker:', '')} />
+                        )
+                        :   (
+                                 mensagem.texto
+                        )}
                     </Text>
                 );
             })}

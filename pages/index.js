@@ -65,10 +65,10 @@ export default function PaginaInicial() {
         >
           {/* Formulário */}
           <Box
-            as="form"
+            as="form"  
             onSubmit={function (infosDoEvento) {
               infosDoEvento.preventDefault();
-              roteamento.push('/chat');
+              roteamento.push(`/chat?username=${username}`);
             }}
             styleSheet={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
